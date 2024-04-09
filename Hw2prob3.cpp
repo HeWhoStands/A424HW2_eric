@@ -3,12 +3,19 @@
 #include <mutex>
 #include <queue>
 #include <chrono>
+#include <atomic>
+#include <condition_variable>
+
+
+
 
 using namespace std;
 
 mutex mtx;
+condition_variable cv;
 queue<int> ATC_queue;
 queue<int> landing_queue;
+atomic<bool> atc_awake(false); // Initially set to false
 
 void approachingPlanes() {
     // First vector [1, 2, 3]
@@ -17,6 +24,7 @@ void approachingPlanes() {
     ATC_queue.push(2);
     ATC_queue.push(3);
     mtx.unlock();
+    atc_awake = true;
     cout << "Approaching planes: 1, 2, 3" << endl;
 
     this_thread::sleep_for(chrono::seconds(1)); // Wait for 1 second
@@ -65,7 +73,7 @@ void landingPlanes() {
                 int planeToDivert = ATC_queue.front();
                 ATC_queue.pop();
                 diverted.push_back(planeToDivert);
-                cout << "Plane " << planeToDivert << " diverted and forgotten" << endl;
+                cout << "Plane " << planeToDivert << " diverted " << endl;
             }
         }
         mtx.unlock();
@@ -91,14 +99,49 @@ void landingProcess() {
     }
 }
 
+void printATCAwake() {
+    while (true) {
+        unique_lock<mutex> lock(mtx);
+        cv.wait(lock, []{ return !atc_awake; }); // Wait until atc_awake is false
+
+        cout << "Air Traffic Controller is awake!" << endl;
+        atc_awake = true;
+
+        lock.unlock();
+
+        
+    }
+}
+
+void checkATCSleep() {
+    this_thread::sleep_for(chrono::seconds(1)); // Check every 1 second
+    while (true) {
+        // Check if both queues are empty
+        mtx.lock();
+        bool allPlanesLanded = ATC_queue.empty() && landing_queue.empty();
+        mtx.unlock();
+
+        if (allPlanesLanded) {
+            cout << "ATC asleep" << endl;
+            break; // Exit the loop
+        }
+
+        this_thread::sleep_for(chrono::seconds(1)); // Check every 1 second
+    }
+}
+
 int main() {
-    thread t1(approachingPlanes);
-    thread t2(landingPlanes);
-    thread t3(landingProcess);
+    thread t1(printATCAwake);
+    thread t2(approachingPlanes);
+    thread t3(landingPlanes);
+    thread t4(landingProcess);
+    thread t5(checkATCSleep);
 
     t1.join();
     t2.join();
     t3.join();
-
+    t4.join();
+    t5.join();
+    
     return 0;
 }
