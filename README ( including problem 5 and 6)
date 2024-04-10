@@ -1,0 +1,12 @@
+Code developed with the Help of Marty Mullen and Aaron Kern
+
+part 5: 
+this depends on how exactly the code is written and how the new command was issued.
+if directly coded into the process the robot would be able to complete the task immediately after the first, there is no code preventing this. 
+however if the command was issued and added onto the end of the process, then the robot will have to reacquire the tools and revisit the task at the end since that is where the command is placed.
+this would obviously be inefficient and in the first case the new command would cause delays as the robot would have the tools longer than it was supposed to. 
+
+part 6: 
+well i ran into quite a few problems with this code before i got it working as intended. i discovered that when using threads that timing and ordering are quite volatile and sensitive.
+for instance, in my code, clusters are scheduled every secons, coincident with the landing process. so exactly which process finishes first can be variable based on the machine running the code.
+if things take time to accomplish, then theres gonna be alot of delays and depending on how the planes are coming in, you might only be able to land the first 3 with all others being diverted. 
